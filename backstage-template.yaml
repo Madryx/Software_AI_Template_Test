@@ -1,73 +1,411 @@
+```yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
+
 metadata:
   name: ai-devops-scaffolder
-  title: AI DevOps Scaffolder
-  description: AI-powered DevOps file generator for any repository
+  title: AI Powered DevOps Scaffolder
+  description: AI-driven CI/CD + GitOps scaffolding for existing repositories
+
   tags:
     - ai
     - devops
     - cicd
+    - gitops
+    - argocd
+    - jenkins
+
 spec:
-  owner: user:default/guest
+  owner: development
   type: service
 
   parameters:
-    - title: Repository
+
+    # =========================================================
+    # REPOSITORY + AI ANALYSIS
+    # =========================================================
+
+    - title: Repository Configuration
+
+      required:
+        - repo
+        - environment
+
       properties:
-        repoUrl:
-          title: GitHub Repository
+
+        repo:
+          title: Select Repository
           type: string
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts: ['github.com']
+
         branch:
           title: Branch
           type: string
           default: main
 
-    - title: CI/CD Configuration
+        environment:
+          title: Target Environment
+          type: string
+
+          enum:
+            - dev
+            - qa
+            - prod
+
+          enumNames:
+            - Development
+            - Quality Assurance
+            - Production
+
+    # =========================================================
+    # AI DEVOPS CONFIG
+    # =========================================================
+
+    - title: AI DevOps Configuration
+
+      required:
+        - ciProvider
+        - cdProvider
+        - registry
+
       properties:
+
         ciProvider:
           title: CI Provider
           type: string
-          enum: ['jenkins', 'github-actions', 'gitlab-ci']
+
+          enum:
+            - jenkins
+            - github-actions
+            - gitlab-ci
+
+          enumNames:
+            - Jenkins
+            - GitHub Actions
+            - GitLab CI
+
           default: jenkins
+
         cdProvider:
           title: CD Provider
           type: string
-          enum: ['argocd', 'github-actions-cd']
+
+          enum:
+            - argocd
+            - github-actions-cd
+            - gitlab-cd
+
+          enumNames:
+            - ArgoCD
+            - GitHub Actions CD
+            - GitLab CD
+
           default: argocd
+
         registry:
           title: Container Registry
           type: string
-          enum: ['dockerhub', 'ghcr']
+
+          enum:
+            - dockerhub
+            - ghcr
+
+          enumNames:
+            - DockerHub
+            - GitHub Container Registry
+
           default: dockerhub
+
         dockerhubUser:
           title: DockerHub Username
           type: string
-        namespace:
-          title: Kubernetes Namespace
+
+        enableSonar:
+          title: Enable SonarQube
+          type: boolean
+          default: true
+
+        enableIngress:
+          title: Enable Ingress
+          type: boolean
+          default: true
+
+        replicas:
+          title: Replicas
+          type: number
+          default: 1
+
+    # =========================================================
+    # ADVANCED OPTIONS
+    # =========================================================
+
+    - title: Advanced Configuration
+
+      properties:
+
+        appPort:
+          title: Application Port
           type: string
-          default: default
+          default: auto-detect
+
+        runtimeVersion:
+          title: Runtime Version Override
+          type: string
+          default: auto-detect
+
+        customBuildCommand:
+          title: Custom Build Command
+          type: string
+
+        customTestCommand:
+          title: Custom Test Command
+          type: string
 
   steps:
-    - id: ai-scaffold
-      name: AI Generate DevOps Files
-      action: ai:scaffold:devops
+
+    # =========================================================
+    # STEP 1 - AI ANALYZE REPOSITORY
+    # =========================================================
+
+    - id: ai-analyze
+      name: AI Analyze Repository
+
+      action: ai:analyze:repository
+
       input:
-        repoUrl: ${{ parameters.repoUrl }}
+        repo: ${{ parameters.repo }}
         branch: ${{ parameters.branch }}
-        ciProvider: ${{ parameters.ciProvider }}
-        cdProvider: ${{ parameters.cdProvider }}
-        registry: ${{ parameters.registry }}
-        namespace: ${{ parameters.namespace }}
-        dockerhubUser: ${{ parameters.dockerhubUser }}
+
+    # =========================================================
+    # STEP 2 - AI GENERATE FILES
+    # =========================================================
+
+    - id: ai-generate
+      name: AI Generate DevOps Files
+
+      action: ai:scaffold:devops
+
+      input:
+
+        repo: ${{ parameters.repo }}
+
+        branch: ${{ parameters.branch }}
+
+        detectedLanguage:
+          ${{ steps['ai-analyze'].output.language }}
+
+        detectedFramework:
+          ${{ steps['ai-analyze'].output.framework }}
+
+        detectedBuildTool:
+          ${{ steps['ai-analyze'].output.buildTool }}
+
+        detectedPort:
+          ${{ steps['ai-analyze'].output.port }}
+
+        hasTests:
+          ${{ steps['ai-analyze'].output.hasTests }}
+
+        ciProvider:
+          ${{ parameters.ciProvider }}
+
+        cdProvider:
+          ${{ parameters.cdProvider }}
+
+        registry:
+          ${{ parameters.registry }}
+
+        dockerhubUser:
+          ${{ parameters.dockerhubUser }}
+
+        namespace:
+          ${{ parameters.environment }}
+
+        enableSonar:
+          ${{ parameters.enableSonar }}
+
+        enableIngress:
+          ${{ parameters.enableIngress }}
+
+        replicas:
+          ${{ parameters.replicas }}
+
+        runtimeVersion:
+          ${{ parameters.runtimeVersion }}
+
+        customBuildCommand:
+          ${{ parameters.customBuildCommand }}
+
+        customTestCommand:
+          ${{ parameters.customTestCommand }}
+
+    # =========================================================
+    # STEP 3 - FETCH STATIC BASE STRUCTURE
+    # =========================================================
+
+    - id: fetch-skeleton
+      name: Fetch Base Skeleton
+
+      action: fetch:template
+
+      input:
+        url: ./template/skeleton
+
+        values:
+          app_name: ${{ parameters.repo }}
+          app_env: ${{ parameters.environment }}
+
+    # =========================================================
+    # STEP 4 - WRITE AI GENERATED FILES
+    # =========================================================
+
+    - id: write-dockerfile
+      name: Write Dockerfile
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./Dockerfile
+        content:
+          ${{ steps['ai-generate'].output.dockerfile }}
+
+    - id: write-ci
+      name: Write CI File
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path:
+          ${{ steps['ai-generate'].output.ciFileName }}
+
+        content:
+          ${{ steps['ai-generate'].output.ciFile }}
+
+    - id: write-deployment
+      name: Write Deployment YAML
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./manifest-templates/deployment.yaml
+
+        content:
+          ${{ steps['ai-generate'].output.deploymentYaml }}
+
+    - id: write-service
+      name: Write Service YAML
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./manifest-templates/service.yaml
+
+        content:
+          ${{ steps['ai-generate'].output.serviceYaml }}
+
+    - id: write-ingress
+      if: ${{ parameters.enableIngress }}
+
+      name: Write Ingress YAML
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./manifest-templates/ingress.yaml
+
+        content:
+          ${{ steps['ai-generate'].output.ingressYaml }}
+
+    - id: write-argocd
+      name: Write ArgoCD Application
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./manifest-templates/application.yaml
+
+        content:
+          ${{ steps['ai-generate'].output.argocdAppYaml }}
+
+    - id: write-catalog
+      name: Write Backstage Catalog
+
+      action: roadiehq:utils:fs:write
+
+      input:
+        path: ./catalog-info.yaml
+
+        content:
+          ${{ steps['ai-generate'].output.catalogInfoYaml }}
+
+    # =========================================================
+    # STEP 5 - PUSH TO REPOSITORY
+    # =========================================================
+
+    - id: push-to-repo
+      name: Push Generated DevOps Files
+
+      action: github:push
+
+      input:
+        repoUrl:
+          github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}
+
+        branch: ${{ parameters.branch }}
+
+        commitMessage: |
+          chore(ai-devops):
+          inject AI-generated CI/CD + GitOps scaffolding
+
+        sourcePath: ./
 
   output:
+
+    links:
+
+      - title: Repository
+        url: |
+          https://github.com/BackstageSSPPoC/${{ parameters.repo }}/tree/${{ parameters.branch }}
+
+      - title: Generated Deployment Namespace
+        url: |
+          https://kubernetes-dashboard.example.com/#/ns/${{ parameters.environment }}
+
     text:
-      - title: Results
+
+      - title: AI Analysis Results
         content: |
-          **Detected Language:** ${{ steps['ai-scaffold'].output.detectedLanguage }}
-          **Detected Framework:** ${{ steps['ai-scaffold'].output.detectedFramework }}
-          **Generated Files:** ${{ steps['ai-scaffold'].output.generatedFiles }}
+
+          ## AI Repository Analysis
+
+          **Language**
+          ${{ steps['ai-analyze'].output.language }}
+
+          **Framework**
+          ${{ steps['ai-analyze'].output.framework }}
+
+          **Build Tool**
+          ${{ steps['ai-analyze'].output.buildTool }}
+
+          **Detected Port**
+          ${{ steps['ai-analyze'].output.port }}
+
+          **Has Tests**
+          ${{ steps['ai-analyze'].output.hasTests }}
+
+      - title: Generated DevOps Files
+        content: |
+
+          ✅ Dockerfile
+
+          ✅ CI Pipeline
+
+          ✅ Kubernetes Deployment
+
+          ✅ Service YAML
+
+          ✅ Ingress YAML
+
+          ✅ ArgoCD Application
+
+          ✅ Backstage Catalog
+```
