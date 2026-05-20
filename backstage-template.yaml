@@ -19,27 +19,20 @@ spec:
 
   parameters:
 
-    # =========================================================
-    # STEP 1 — REPOSITORY + TARGET ENVIRONMENT
-    # =========================================================
-
     - title: Repository & Target Environment
       required:
         - repo
         - environment
       properties:
-
         repo:
           title: Repository Name
           type: string
           description: GitHub repo name under BackstageSSPPoC org
           ui:autofocus: true
-
         branch:
           title: Source Branch
           type: string
           default: main
-
         environment:
           title: Target Environment
           type: string
@@ -53,17 +46,12 @@ spec:
             - Production
           default: dev
 
-    # =========================================================
-    # STEP 2 — CI / CD / REGISTRY
-    # =========================================================
-
     - title: CI/CD & Registry
       required:
         - ciProvider
         - cdProvider
         - registry
       properties:
-
         ciProvider:
           title: CI Provider
           type: string
@@ -76,7 +64,6 @@ spec:
             - GitHub Actions
             - GitLab CI
           default: jenkins
-
         cdProvider:
           title: CD Provider
           type: string
@@ -89,7 +76,6 @@ spec:
             - GitHub Actions CD
             - GitLab CD
           default: argocd
-
         registry:
           title: Container Registry
           type: string
@@ -100,222 +86,66 @@ spec:
             - DockerHub
             - GitHub Container Registry (GHCR)
           default: dockerhub
-
         dockerhubUser:
           title: DockerHub Username
           type: string
           description: Required when registry is DockerHub
 
-    # =========================================================
-    # STEP 3 — KUBERNETES & FEATURES
-    # =========================================================
-
     - title: Kubernetes & Features
       properties:
-
         replicas:
           title: Replicas
           type: number
           default: 1
-
         enableIngress:
           title: Enable Ingress
           type: boolean
           default: true
-
         enableSonar:
           title: Enable SonarQube Analysis
           type: boolean
           default: true
 
-    # =========================================================
-    # STEP 4 — ADVANCED OVERRIDES
-    # =========================================================
-
     - title: Advanced Overrides (Optional)
       properties:
-
         customBuildCommand:
           title: Custom Build Command
           type: string
-          description: Override AI-detected build command
-
         customTestCommand:
           title: Custom Test Command
           type: string
-          description: Override AI-detected test command
-
-  # =========================================================
-  # STEPS
-  # =========================================================
 
   steps:
 
-    # ---------------------------------------------------------
-    # STEP 1 — AI reads repo, detects stack, generates all files
-    # ---------------------------------------------------------
-
+    # ── STEP 1: AI analyzes repo, detects stack, writes files to workspace ──
     - id: ai-scaffold
       name: "AI: Analyze Repo & Generate DevOps Files"
       action: ai:scaffold:devops
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
         branch: ${{ parameters.branch }}
+        environment: ${{ parameters.environment }}
         ciProvider: ${{ parameters.ciProvider }}
         cdProvider: ${{ parameters.cdProvider }}
         registry: ${{ parameters.registry }}
         dockerhubUser: ${{ parameters.dockerhubUser }}
         namespace: ${{ parameters.environment }}
-        environment: ${{ parameters.environment }}
         replicas: ${{ parameters.replicas }}
         enableIngress: ${{ parameters.enableIngress }}
         enableSonar: ${{ parameters.enableSonar }}
         customBuildCommand: ${{ parameters.customBuildCommand }}
         customTestCommand: ${{ parameters.customTestCommand }}
 
-    # ---------------------------------------------------------
-    # STEP 2 — Write Dockerfile (AI-generated, multi-stage)
-    # ---------------------------------------------------------
-
-    - id: write-dockerfile
-      name: "Write: Dockerfile"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./Dockerfile
-        content: ${{ steps['ai-scaffold'].output.dockerfile }}
-
-    # ---------------------------------------------------------
-    # STEP 3 — Write CI Pipeline
-    #          Jenkins   → Jenkinsfile
-    #          GHA       → .github/workflows/ci.yml
-    #          GitLab    → .gitlab-ci.yml
-    # ---------------------------------------------------------
-
-    - id: write-ci
-      name: "Write: CI Pipeline (${{ parameters.ciProvider }})"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ${{ steps['ai-scaffold'].output.ciFileName }}
-        content: ${{ steps['ai-scaffold'].output.ciFile }}
-
-    # ---------------------------------------------------------
-    # STEP 4 — Write manifest-templates/
-    #          Jenkinsfile GitOps stage will cp + sed these
-    # ---------------------------------------------------------
-
-    - id: write-deployment
-      name: "Write: manifest-templates/deployment.yaml"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./manifest-templates/deployment.yaml
-        content: ${{ steps['ai-scaffold'].output.deploymentYaml }}
-
-    - id: write-service
-      name: "Write: manifest-templates/service.yaml"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./manifest-templates/service.yaml
-        content: ${{ steps['ai-scaffold'].output.serviceYaml }}
-
-    - id: write-ingress
-      name: "Write: manifest-templates/ingress.yaml"
-      if: ${{ parameters.enableIngress }}
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./manifest-templates/ingress.yaml
-        content: ${{ steps['ai-scaffold'].output.ingressYaml }}
-
-    - id: write-argocd
-      name: "Write: manifest-templates/application.yaml"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./manifest-templates/application.yaml
-        content: ${{ steps['ai-scaffold'].output.argocdAppYaml }}
-
-    # ---------------------------------------------------------
-    # STEP 5 — Write Backstage catalog-info.yaml
-    # ---------------------------------------------------------
-
-    - id: write-catalog
-      name: "Write: catalog-info.yaml"
-      action: roadiehq:utils:fs:write
-      input:
-        path: ./catalog-info.yaml
-        content: ${{ steps['ai-scaffold'].output.catalogInfoYaml }}
-
-    # ---------------------------------------------------------
-    # STEP 6 — Open PR — never direct push to main
-    # ---------------------------------------------------------
-
-    - id: create-pr
-      name: "GitHub: Open Pull Request"
-      action: publish:github:pull-request
+    # ── STEP 2: Push all generated files to a new branch + open PR ──
+    - id: github-push
+      name: "GitHub: Push Files & Open Pull Request"
+      action: github:push
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
-
-        branchName: "ai-devops/${{ parameters.environment }}/${{ parameters.ciProvider }}-${{ parameters.cdProvider }}"
-
-        title: |
-          chore: AI DevOps scaffolding — ${{ parameters.repo }} (${{ parameters.environment }})
-
-        description: |
-          ## AI-Generated DevOps Scaffolding
-
-          **Repo:** `${{ parameters.repo }}` | **Env:** `${{ parameters.environment }}` | **Branch:** `${{ parameters.branch }}`
-
-          ---
-
-          ### Stack (AI-Detected)
-          | Property | Value |
-          |---|---|
-          | Language | `${{ steps['ai-scaffold'].output.detectedLanguage }}` |
-          | Framework | `${{ steps['ai-scaffold'].output.detectedFramework }}` |
-          | Build Tool | `${{ steps['ai-scaffold'].output.detectedBuildTool }}` |
-
-          ---
-
-          ### Generated Files
-          | File | Description |
-          |---|---|
-          | `Dockerfile` | AI-selected multi-stage build |
-          | `${{ steps['ai-scaffold'].output.ciFileName }}` | Full CI/CD pipeline |
-          | `manifest-templates/deployment.yaml` | K8s Deployment template |
-          | `manifest-templates/service.yaml` | K8s Service template |
-          | `manifest-templates/ingress.yaml` | K8s Ingress template |
-          | `manifest-templates/application.yaml` | ArgoCD Application template |
-          | `catalog-info.yaml` | Backstage Component |
-
-          ---
-
-          ### CI Pipeline Flow
-          ```
-          Checkout → Decide (CI / CI+CD)
-            ↓
-          [CI]  Setup Env → Build → Run Tests → SonarQube → Quality Gate
-            ↓ (main branch only)
-          [CD]  Docker Build → Docker Push → GitOps Update
-                  └─ clones k8s-manifests
-                  └─ copies manifest-templates → apps/$APP_NAME/$ENV/
-                  └─ replaces ${APP_NAME}, ${DOCKER_IMAGE}, ${APP_PORT}, ${NAMESPACE}
-                  └─ git commit + push → ArgoCD auto-sync triggers
-          ```
-
-          ---
-
-          **Merge this PR** to push CI/CD config to `${{ parameters.branch }}` and trigger your first pipeline run.
-
-        targetBranchName: ${{ parameters.branch }}
-        sourcePath: ./
-        update: true
-        commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.repo }} (${{ parameters.environment }})"
-
-  # =========================================================
-  # OUTPUT
-  # =========================================================
+        branch: "ai-devops/${{ parameters.environment }}/${{ parameters.ciProvider }}"
+        commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ steps['ai-scaffold'].output.detectedLanguage }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
 
   output:
     links:
-      - title: View Pull Request
-        url: ${{ steps['create-pr'].output.remoteUrl }}
       - title: View Repository
         url: "https://github.com/BackstageSSPPoC/${{ parameters.repo | trim }}"
