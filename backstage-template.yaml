@@ -3,7 +3,7 @@ kind: Template
 
 metadata:
   name: ai-devops-scaffolder
-  title: AI Powered DevOps Scaffolder
+  title: AI Scaffolding Engine
   description: AI-driven CI/CD + GitOps scaffolding for existing repositories
   tags:
     - ai
