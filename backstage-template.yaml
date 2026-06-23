@@ -41,9 +41,9 @@ spec:
             - qa
             - prod
           enumNames:
-            - Development
-            - Quality Assurance
-            - Production
+            - Dev
+            - Test
+            - Prod
           default: dev
 
     - title: CI/CD & Registry
