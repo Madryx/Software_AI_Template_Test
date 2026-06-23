@@ -142,7 +142,7 @@ spec:
       action: github:push
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
-        branch: "ai-devops/${{ parameters.environment }}/${{ parameters.ciProvider }}"
+        branch: ${{ parameters.branch }}
         commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ steps['ai-scaffold'].output.detectedLanguage }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
 
   output:
