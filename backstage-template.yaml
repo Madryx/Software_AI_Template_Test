@@ -320,7 +320,7 @@ spec:
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
         branch: ${{ parameters.branch }}
-        componentOwner: ${{ user.entity.metadata.name }}
+        componentOwner: ${{ user.ref }}
         language: ${{ parameters.language }}
         environment: ${{ parameters.environment }}
         targetLocation: ${{ parameters.targetLocation }}
