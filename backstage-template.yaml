@@ -1,3 +1,156 @@
+# apiVersion: scaffolder.backstage.io/v1beta3
+# kind: Template
+
+# metadata:
+#   name: ai-devops-scaffolder
+#   title: AI Template Scaffolding
+#   description: AI-driven CI/CD + GitOps scaffolding for existing repositories
+#   tags:
+#     - ai
+#     - devops
+#     - cicd
+#     - gitops
+#     - argocd
+#     - jenkins
+
+# spec:
+#   owner: development
+#   type: service
+
+#   parameters:
+
+#     - title: Repository & Target Environment
+#       required:
+#         - repo
+#         - environment
+#       properties:
+#         repo:
+#           title: Repository Name
+#           type: string
+#           description: GitHub repo name under BackstageSSPPoC org
+#           ui:autofocus: true
+#         owner:
+#           title: Owner
+#           type: string
+#           description: Owner of this component
+#           ui:field: OwnerPicker
+#           ui:options:
+#             catalogFilter:
+#               kind: [User]  
+#         branch:
+#           title: Source Branch
+#           type: string
+#           default: main
+#         environment:
+#           title: Target Environment
+#           type: string
+#           enum:
+#             - dev
+#             - qa
+#             - prod
+#           enumNames:
+#             - Dev
+#             - Test
+#             - Prod
+#           default: dev
+
+#     - title: CI/CD & Registry
+#       required:
+#         - ciProvider
+#         - cdProvider
+#         - registry
+#       properties:
+#         ciProvider:
+#           title: CI Provider
+#           type: string
+#           enum:
+#             - jenkins
+#             - github-actions
+#             - gitlab-ci
+#           enumNames:
+#             - Jenkins
+#             - GitHub Actions
+#             - GitLab CI
+#           default: jenkins
+#         cdProvider:
+#           title: CD Provider
+#           type: string
+#           enum:
+#             - argocd
+#             - github-actions-cd
+#             - gitlab-cd
+#           enumNames:
+#             - ArgoCD (GitOps)
+#             - GitHub Actions CD
+#             - GitLab CD
+#           default: argocd
+#         registry:
+#           title: Container Registry
+#           type: string
+#           enum:
+#             - dockerhub
+#             - ghcr
+#           enumNames:
+#             - DockerHub
+#             - GitHub Container Registry (GHCR)
+#           default: dockerhub
+#         dockerhubUser:
+#           title: DockerHub Username
+#           type: string
+#           description: Required when registry is DockerHub
+
+#     - title: Kubernetes & Features
+#       properties:
+#         replicas:
+#           title: Replicas
+#           type: number
+#           default: 1
+#         enableIngress:
+#           title: Enable Ingress
+#           type: boolean
+#           default: true
+#         enableSonar:
+#           title: Enable SonarQube Analysis
+#           type: boolean
+#           default: true
+
+#   steps:
+
+#     # ── STEP 1: AI analyzes repo, detects stack, writes files to workspace ──
+#     - id: ai-scaffold
+#       name: "AI: Analyze Repo & Generate DevOps Files"
+#       action: ai:scaffold:devops
+#       input:
+#         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
+#         branch: ${{ parameters.branch }}
+#         componentOwner: ${{ parameters.owner }}
+#         environment: ${{ parameters.environment }}
+#         ciProvider: ${{ parameters.ciProvider }}
+#         cdProvider: ${{ parameters.cdProvider }}
+#         registry: ${{ parameters.registry }}
+#         dockerhubUser: ${{ parameters.dockerhubUser }}
+#         namespace: ${{ parameters.environment }}
+#         replicas: ${{ parameters.replicas }}
+#         enableIngress: ${{ parameters.enableIngress }}
+#         enableSonar: ${{ parameters.enableSonar }}
+#         customBuildCommand: ${{ parameters.customBuildCommand }}
+#         customTestCommand: ${{ parameters.customTestCommand }}
+
+#     # ── STEP 2: Push all generated files to a new branch + open PR ──
+#     - id: github-push
+#       name: "GitHub: Push Files & Open Pull Request"
+#       action: github:push
+#       input:
+#         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
+#         branch: ${{ parameters.branch }}
+#         commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ steps['ai-scaffold'].output.detectedLanguage }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
+
+#   output:
+#     links:
+#       - title: View Repository
+#         url: "https://github.com/BackstageSSPPoC/${{ parameters.repo | trim }}"
+
+
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 
@@ -21,9 +174,27 @@ spec:
 
     - title: Repository & Target Environment
       required:
+        - scmServer
         - repo
         - environment
       properties:
+        scmServer:
+          title: SCM Server
+          type: string
+          description: Source Control Management server where your repository is hosted
+          enum:
+            - github
+            - gitlab
+            - bitbucket
+            - azure-devops
+            - gitea
+          enumNames:
+            - GitHub
+            - GitLab
+            - Bitbucket
+            - Azure DevOps
+            - Gitea
+          default: github
         repo:
           title: Repository Name
           type: string
