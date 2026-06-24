@@ -177,40 +177,56 @@ spec:
       required:
         - scmServer
         - repo
+        - language
         - environment
+        - targetLocation
       properties:
         scmServer:
           title: SCM Server
           type: string
-          description: Select Source Code Management server where your repository is hosted
+          description: Source Control Management server where your repository is hosted
           enum:
             - github
             - gitlab
             - bitbucket
+            - azure-devops
             - gitea
           enumNames:
             - GitHub
             - GitLab
             - Bitbucket
+            - Azure DevOps
             - Gitea
           default: github
         repo:
           title: Repository Name
           type: string
-          description: Repo name under Organization
+          description: GitHub repo name under BackstageSSPPoC org
           ui:autofocus: true
+        language:
+          title: Application Language
+          type: string
+          description: Primary language/runtime of the application
+          enum:
+            - python
+            - java
+            - nodejs
+          enumNames:
+            - Python
+            - Java
+            - Node.js
+          default: python
         owner:
           title: Owner
           type: string
           description: Owner of this component
-          ui:field: OwnerPicker
-          ui:options:
-            catalogFilter:
-              kind: [User]  
+          default: ${{ user.entity.metadata.name }}
+          ui:disabled: true
         branch:
           title: Source Branch
           type: string
           default: main
+          ui:disabled: true
         environment:
           title: Target Environment
           type: string
@@ -223,6 +239,23 @@ spec:
             - Test
             - Prod
           default: dev
+        targetLocation:
+          title: Target Location
+          type: string
+          description: Infrastructure target where the application will be deployed
+          enum:
+            - kubernetes
+            - vm
+            - bare-metal
+            - ecs
+            - lambda
+          enumNames:
+            - Kubernetes Cluster
+            - Virtual Machine (VM)
+            - Bare Metal Server
+            - AWS ECS
+            - AWS Lambda (Serverless)
+          default: kubernetes
 
     - title: CI/CD & Registry
       required:
@@ -294,7 +327,9 @@ spec:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
         branch: ${{ parameters.branch }}
         componentOwner: ${{ parameters.owner }}
+        language: ${{ parameters.language }}
         environment: ${{ parameters.environment }}
+        targetLocation: ${{ parameters.targetLocation }}
         ciProvider: ${{ parameters.ciProvider }}
         cdProvider: ${{ parameters.cdProvider }}
         registry: ${{ parameters.registry }}
@@ -313,7 +348,7 @@ spec:
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
         branch: ${{ parameters.branch }}
-        commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ steps['ai-scaffold'].output.detectedLanguage }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
+        commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ parameters.language }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
 
   output:
     links:
