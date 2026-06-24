@@ -182,24 +182,22 @@ spec:
         scmServer:
           title: SCM Server
           type: string
-          description: Source Control Management server where your repository is hosted
+          description: Select Source Code Management server where your repository is hosted
           enum:
             - github
             - gitlab
             - bitbucket
-            - azure-devops
             - gitea
           enumNames:
             - GitHub
             - GitLab
             - Bitbucket
-            - Azure DevOps
             - Gitea
           default: github
         repo:
           title: Repository Name
           type: string
-          description: GitHub repo name under BackstageSSPPoC org
+          description: Repo name under Organization
           ui:autofocus: true
         owner:
           title: Owner
