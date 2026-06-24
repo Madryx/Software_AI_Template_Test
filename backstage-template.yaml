@@ -269,6 +269,21 @@ spec:
           type: string
           description: Required when registry is DockerHub
 
+    - title: Kubernetes & Features
+      properties:
+        replicas:
+          title: Replicas
+          type: number
+          default: 1
+        enableIngress:
+          title: Enable Ingress
+          type: boolean
+          default: true
+        enableSonar:
+          title: Enable SonarQube Analysis
+          type: boolean
+          default: true
+
   steps:
 
     # ── STEP 1: AI analyzes repo, detects stack, writes files to workspace ──
