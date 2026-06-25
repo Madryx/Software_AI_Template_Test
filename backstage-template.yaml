@@ -190,13 +190,11 @@ spec:
             - gitlab
             - bitbucket
             - azure-devops
-            - gitea
           enumNames:
             - GitHub
             - GitLab
             - Bitbucket
             - Azure DevOps
-            - Gitea
           default: github
         repo:
           title: Repository Name
