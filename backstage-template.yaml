@@ -216,11 +216,11 @@ spec:
             - Java
             - Node.js
           default: python
-        branch:
-          title: Source Branch
-          type: string
-          default: main
-          ui:disabled: true
+        # branch:
+        #   title: Source Branch
+        #   type: string
+        #   default: main
+        #   ui:disabled: true
         environment:
           title: Target Environment
           type: string
@@ -319,7 +319,7 @@ spec:
       action: ai:scaffold:devops
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
-        branch: ${{ parameters.branch }}
+        branch: main
         componentOwner: ${{ user.ref }}
         language: ${{ parameters.language }}
         environment: ${{ parameters.environment }}
@@ -341,7 +341,7 @@ spec:
       action: github:push
       input:
         repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
-        branch: ${{ parameters.branch }}
+        branch: main
         commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ parameters.language }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
 
   output:
