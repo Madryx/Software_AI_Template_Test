@@ -199,7 +199,7 @@ spec:
         repo:
           title: Repository Name
           type: string
-          description: GitHub repo name under BackstageSSPPoC org
+          description: GitHub repo name under jk7testorg org
           ui:autofocus: true
         language:
           title: Application Language
@@ -301,7 +301,7 @@ spec:
       name: "AI: Analyze Repo & Generate DevOps Files"
       action: ai:scaffold:devops
       input:
-        repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
+        repoUrl: "github.com?owner=jk7testorg&repo=${{ parameters.repo }}"
         branch: main
         componentOwner: ${{ user.ref }}
         language: ${{ parameters.language }}
@@ -323,11 +323,11 @@ spec:
       name: "GitHub: Push Files & Open Pull Request"
       action: github:push
       input:
-        repoUrl: "github.com?owner=BackstageSSPPoC&repo=${{ parameters.repo }}"
+        repoUrl: "github.com?owner=jk7testorg&repo=${{ parameters.repo }}"
         branch: main
         commitMessage: "chore(ai-devops): scaffold CI/CD for ${{ parameters.environment }} [${{ parameters.language }}/${{ steps['ai-scaffold'].output.detectedFramework }}]"
 
   output:
     links:
       - title: View Repository
-        url: "https://github.com/BackstageSSPPoC/${{ parameters.repo | trim }}"
+        url: "https://github.com/jk7testorg/${{ parameters.repo | trim }}"
